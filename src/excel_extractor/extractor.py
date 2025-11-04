@@ -11,7 +11,7 @@ import pandas as pd
 from logger import setup_logger
 
 # Configurar logger para este módulo
-logger = setup_logger(__name__, level="INFO")
+logger = setup_logger(__name__, level="INFO", console_output=False)
 
 
 class ExcelSheetExtractor:
