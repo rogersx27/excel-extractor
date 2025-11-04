@@ -114,9 +114,8 @@ def setup_logger(
     # Deshabilitar propagación para evitar duplicados con root logger
     logger.propagate = False
 
-    # Evitar duplicados si ya está configurado
-    if logger.handlers:
-        return logger
+    # Limpiar handlers existentes para evitar duplicación
+    logger.handlers.clear()
 
     # Formato por defecto
     if format_string is None:
