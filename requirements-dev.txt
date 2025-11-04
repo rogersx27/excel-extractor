@@ -1,0 +1,18 @@
+# Incluye las dependencias de producción
+-r requirements.txt
+
+# Herramientas de desarrollo
+pytest>=7.4.0
+pytest-cov>=4.1.0
+black>=23.7.0
+flake8>=6.1.0
+mypy>=1.5.0
+isort>=5.12.0
+pylint>=2.17.0
+
+# Jupyter y exploración
+ipython>=8.14.0
+jupyter>=1.0.0
+
+# Utilidades
+python-dotenv>=1.0.0
