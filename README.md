@@ -1,6 +1,6 @@
 # Proyecto Python
 
-Proyecto base para desarrollo en Python con buenas prácticas.
+Proyecto base para desarrollo en Python con buenas prácticas y herramientas especializadas para trabajar con archivos Excel.
 
 ## Estructura del Proyecto
 
@@ -83,6 +83,49 @@ pylint src/
 # Type checking con mypy
 mypy src/
 ```
+
+## Trabajar con Excel
+
+Este proyecto incluye herramientas avanzadas para manipular archivos Excel.
+
+### Verificar instalación de librerías Excel
+
+```bash
+python scripts/test_excel_setup.py
+```
+
+### Ejecutar ejemplos de Excel
+
+```bash
+# Ejecutar todos los ejemplos
+python src/excel_examples.py
+
+# O importar y usar el módulo
+python
+>>> from excel_handler import ExcelHandler
+>>> df = ExcelHandler.read_excel_pandas('archivo.xlsx')
+```
+
+### Librerías incluidas para Excel
+
+- **pandas** - Análisis y manipulación de datos
+- **openpyxl** - Leer/escribir .xlsx con estilos y formato
+- **xlsxwriter** - Crear archivos Excel con formato avanzado
+- **xlrd/xlwt** - Soporte para archivos .xls antiguos
+- **pyxlsb** - Leer archivos .xlsb (binarios)
+- **python-calamine** - Lectura ultra-rápida de Excel
+
+### Funcionalidades principales
+
+- Leer y escribir archivos Excel (.xlsx, .xls, .xlsb)
+- Crear hojas, eliminar hojas, renombrar hojas
+- Extraer datos de hojas específicas
+- Aplicar formato profesional (colores, fuentes, bordes)
+- Combinar múltiples archivos Excel
+- Dividir Excel por categorías
+- Procesar grandes volúmenes de datos eficientemente
+
+Consulta `docs/EXCEL_GUIDE.md` para documentación completa y ejemplos avanzados.
 
 ## Desarrollo
 

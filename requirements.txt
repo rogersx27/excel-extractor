@@ -1,6 +1,25 @@
 # Dependencias de producción
-# Añade aquí tus dependencias principales
-# Ejemplo:
-# requests>=2.31.0
-# pandas>=2.0.0
-# numpy>=1.24.0
+
+# === Procesamiento y análisis de datos ===
+pandas>=2.2.0                  # Análisis y manipulación de datos - excelente integración con Excel
+numpy>=1.26.0                  # Operaciones numéricas y matrices
+
+# === Trabajo con archivos Excel (.xlsx) ===
+openpyxl>=3.1.2               # Leer/escribir .xlsx - soporta estilos, fórmulas, gráficos
+xlsxwriter>=3.2.0             # Crear archivos .xlsx con formato avanzado y gráficos
+pyxlsb>=1.0.10                # Leer archivos .xlsb (binarios)
+
+# === Archivos Excel antiguos (.xls) ===
+xlrd>=2.0.1                   # Leer archivos .xls (Excel 97-2003)
+xlwt>=1.3.0                   # Escribir archivos .xls (Excel 97-2003)
+
+# === Lectura rápida y eficiente ===
+python-calamine>=0.2.0        # Lectura ultra-rápida de archivos Excel (alternativa a openpyxl)
+
+# === Utilidades y validación ===
+python-dotenv>=1.0.0          # Gestión de variables de entorno
+python-dateutil>=2.8.2        # Manejo robusto de fechas
+validators>=0.22.0            # Validación de datos (emails, URLs, etc.)
+
+# === Logging y configuración ===
+colorlog>=6.8.0               # Logs con colores para mejor legibilidad
