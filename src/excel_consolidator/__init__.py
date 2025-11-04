@@ -48,7 +48,6 @@ from .utils import (
     create_output_filename,
     ensure_output_directory,
     is_likely_header,
-    make_unique_column_names,
     normalize_column_names,
 )
 
@@ -73,7 +72,6 @@ __all__ = [
     "create_output_filename",
     "ensure_output_directory",
     "is_likely_header",
-    "make_unique_column_names",
     "normalize_column_names",
     # Función helper
     "consolidate_excel_file",

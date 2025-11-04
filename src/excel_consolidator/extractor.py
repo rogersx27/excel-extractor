@@ -14,7 +14,7 @@ from openpyxl import load_workbook
 from logger import setup_logger
 
 from .detector import StructureType, detect_structure
-from .utils import clean_dataframe, is_empty_row, make_unique_column_names
+from .utils import clean_dataframe, is_empty_row
 
 logger = setup_logger(__name__)
 
@@ -171,8 +171,11 @@ def extract_complex_tables(
             # Extraer encabezado (convertir a 0-indexed)
             header = list(all_rows[header_idx - 1])
 
-            # Limpiar encabezado y hacer nombres únicos (usar 'extra' para columnas inválidas)
-            header = make_unique_column_names(header)
+            # Limpiar encabezado (eliminar None y vacíos)
+            header = [
+                str(col).strip() if col is not None else f"Column_{idx}"
+                for idx, col in enumerate(header)
+            ]
 
             # Extraer datos
             data_rows = []
