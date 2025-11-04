@@ -3,6 +3,7 @@
 Este módulo proporciona la clase ExcelConsolidator para consolidar
 archivos Excel extraídos en archivos limpios con datos normalizados.
 """
+
 import time
 from pathlib import Path
 from typing import Dict, List, Optional, Union
@@ -38,7 +39,7 @@ class ExcelConsolidator:
         self,
         output_dir: Optional[Union[str, Path]] = None,
         output_subdir: str = "consolidado",
-        suffix: str = "_consolidado"
+        suffix: str = "_consolidado",
     ):
         """Inicializa el consolidador.
 
@@ -61,7 +62,7 @@ class ExcelConsolidator:
         self,
         file_path: Union[str, Path],
         sheet_name: Optional[str] = None,
-        output_path: Optional[Union[str, Path]] = None
+        output_path: Optional[Union[str, Path]] = None,
     ) -> Dict:
         """Consolida un archivo Excel.
 
@@ -96,14 +97,14 @@ class ExcelConsolidator:
         logger.info(f"{'='*60}")
 
         result = {
-            'success': False,
-            'input_file': file_path,
-            'output_file': None,
-            'rows_extracted': 0,
-            'columns': [],
-            'structure_type': 'unknown',
-            'processing_time': 0.0,
-            'error': None
+            "success": False,
+            "input_file": file_path,
+            "output_file": None,
+            "rows_extracted": 0,
+            "columns": [],
+            "structure_type": "unknown",
+            "processing_time": 0.0,
+            "error": None,
         }
 
         try:
@@ -114,7 +115,7 @@ class ExcelConsolidator:
             # 2. Detectar estructura
             logger.info("📊 Detectando estructura...")
             structure_info = detect_structure(file_path, sheet_name)
-            result['structure_type'] = structure_info['type']
+            result["structure_type"] = structure_info["type"]
 
             # 3. Extraer datos
             logger.info("📤 Extrayendo datos...")
@@ -122,11 +123,11 @@ class ExcelConsolidator:
 
             if df.empty:
                 logger.warning("⚠️  No se extrajeron datos del archivo")
-                result['error'] = "No se extrajeron datos"
+                result["error"] = "No se extrajeron datos"
                 return result
 
-            result['rows_extracted'] = len(df)
-            result['columns'] = df.columns.tolist()
+            result["rows_extracted"] = len(df)
+            result["columns"] = df.columns.tolist()
 
             # 4. Determinar ruta de salida
             if output_path:
@@ -139,13 +140,13 @@ class ExcelConsolidator:
 
             # 5. Guardar archivo consolidado
             logger.info(f"💾 Guardando archivo consolidado...")
-            df.to_excel(output_file, index=False, engine='openpyxl')
+            df.to_excel(output_file, index=False, engine="openpyxl")
 
-            result['output_file'] = output_file
-            result['success'] = True
+            result["output_file"] = output_file
+            result["success"] = True
 
             # Tiempo de procesamiento
-            result['processing_time'] = time.time() - start_time
+            result["processing_time"] = time.time() - start_time
 
             logger.info(f"✅ Consolidación exitosa!")
             logger.info(f"   📊 Filas extraídas: {result['rows_extracted']}")
@@ -155,8 +156,8 @@ class ExcelConsolidator:
 
         except Exception as e:
             logger.error(f"❌ Error consolidando {file_path.name}: {e}")
-            result['error'] = str(e)
-            result['processing_time'] = time.time() - start_time
+            result["error"] = str(e)
+            result["processing_time"] = time.time() - start_time
 
         finally:
             self.results.append(result)
@@ -168,7 +169,7 @@ class ExcelConsolidator:
         directory: Union[str, Path],
         pattern: str = "*.xlsx",
         recursive: bool = False,
-        exclude_patterns: Optional[List[str]] = None
+        exclude_patterns: Optional[List[str]] = None,
     ) -> Dict:
         """Consolida todos los archivos Excel de un directorio.
 
@@ -212,7 +213,8 @@ class ExcelConsolidator:
         # Filtrar archivos excluidos
         if exclude_patterns:
             files = [
-                f for f in files
+                f
+                for f in files
                 if not any(pattern in str(f) for pattern in exclude_patterns)
             ]
 
@@ -221,11 +223,11 @@ class ExcelConsolidator:
         if not files:
             logger.warning("⚠️  No se encontraron archivos para procesar")
             return {
-                'total_files': 0,
-                'successful': 0,
-                'failed': 0,
-                'results': [],
-                'total_time': 0.0
+                "total_files": 0,
+                "successful": 0,
+                "failed": 0,
+                "results": [],
+                "total_time": 0.0,
             }
 
         # Procesar cada archivo
@@ -235,16 +237,16 @@ class ExcelConsolidator:
 
         # Generar resumen
         total_time = time.time() - start_time
-        successful = sum(1 for r in self.results if r['success'])
+        successful = sum(1 for r in self.results if r["success"])
         failed = len(self.results) - successful
 
         summary = {
-            'total_files': len(files),
-            'successful': successful,
-            'failed': failed,
-            'results': self.results,
-            'total_time': total_time,
-            'success_rate': (successful / len(files) * 100) if files else 0
+            "total_files": len(files),
+            "successful": successful,
+            "failed": failed,
+            "results": self.results,
+            "total_time": total_time,
+            "success_rate": (successful / len(files) * 100) if files else 0,
         }
 
         # Log resumen
@@ -301,21 +303,16 @@ class ExcelConsolidator:
             >>> print(summary['total_processed'])
         """
         if not self.results:
-            return {
-                'total_processed': 0,
-                'successful': 0,
-                'failed': 0,
-                'results': []
-            }
+            return {"total_processed": 0, "successful": 0, "failed": 0, "results": []}
 
-        successful = sum(1 for r in self.results if r['success'])
+        successful = sum(1 for r in self.results if r["success"])
 
         return {
-            'total_processed': len(self.results),
-            'successful': successful,
-            'failed': len(self.results) - successful,
-            'total_rows': sum(r['rows_extracted'] for r in self.results),
-            'results': self.results
+            "total_processed": len(self.results),
+            "successful": successful,
+            "failed": len(self.results) - successful,
+            "total_rows": sum(r["rows_extracted"] for r in self.results),
+            "results": self.results,
         }
 
     def clear_results(self):

@@ -4,6 +4,7 @@ Este módulo extrae datos de archivos Excel según su estructura:
 - Simples: Lectura directa con pandas
 - Complejos: Extracción de múltiples tablas y consolidación
 """
+
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -13,7 +14,7 @@ from openpyxl import load_workbook
 from logger import setup_logger
 
 from .detector import StructureType, detect_structure
-from .utils import clean_dataframe, is_empty_row
+from .utils import clean_dataframe, is_empty_row, make_unique_column_names
 
 logger = setup_logger(__name__)
 
@@ -21,7 +22,7 @@ logger = setup_logger(__name__)
 def extract_data(
     file_path: Path,
     sheet_name: Optional[str] = None,
-    structure_info: Optional[Dict] = None
+    structure_info: Optional[Dict] = None,
 ) -> pd.DataFrame:
     """Extrae datos de un archivo Excel automáticamente.
 
@@ -45,11 +46,11 @@ def extract_data(
     if structure_info is None:
         structure_info = detect_structure(file_path, sheet_name)
 
-    structure_type = structure_info['type']
+    structure_type = structure_info["type"]
 
     # Usar el sheet_name de structure_info si no se proporcionó uno
-    if sheet_name is None and 'sheet_name' in structure_info:
-        sheet_name = structure_info['sheet_name']
+    if sheet_name is None and "sheet_name" in structure_info:
+        sheet_name = structure_info["sheet_name"]
 
     # Seleccionar método de extracción
     if structure_type == StructureType.SIMPLE:
@@ -59,17 +60,14 @@ def extract_data(
     else:
         # Estructura desconocida, intentar lectura simple
         logger.warning(
-            f"Estructura desconocida en {file_path}, "
-            f"intentando lectura simple"
+            f"Estructura desconocida en {file_path}, " f"intentando lectura simple"
         )
         df = extract_simple_table(file_path, sheet_name, structure_info)
 
     # Limpiar DataFrame
     df = clean_dataframe(df)
 
-    logger.info(
-        f"Extracción completada: {len(df)} filas, {len(df.columns)} columnas"
-    )
+    logger.info(f"Extracción completada: {len(df)} filas, {len(df.columns)} columnas")
 
     return df
 
@@ -77,7 +75,7 @@ def extract_data(
 def extract_simple_table(
     file_path: Path,
     sheet_name: Optional[str] = None,
-    structure_info: Optional[Dict] = None
+    structure_info: Optional[Dict] = None,
 ) -> pd.DataFrame:
     """Extrae una tabla simple (un solo encabezado).
 
@@ -97,16 +95,12 @@ def extract_simple_table(
     try:
         # Si tenemos info de estructura, usar para skiprows
         skiprows = 0
-        if structure_info and structure_info['header_rows']:
+        if structure_info and structure_info["header_rows"]:
             # El encabezado está en la primera posición detectada
-            header_row = structure_info['header_rows'][0]
+            header_row = structure_info["header_rows"][0]
             skiprows = header_row - 1  # pandas usa 0-indexed
 
-        df = pd.read_excel(
-            file_path,
-            sheet_name=sheet_name,
-            skiprows=skiprows
-        )
+        df = pd.read_excel(file_path, sheet_name=sheet_name, skiprows=skiprows)
 
         # Validar que obtuvimos un DataFrame (no un dict)
         if isinstance(df, dict):
@@ -127,7 +121,7 @@ def extract_simple_table(
 def extract_complex_tables(
     file_path: Path,
     sheet_name: Optional[str] = None,
-    structure_info: Optional[Dict] = None
+    structure_info: Optional[Dict] = None,
 ) -> pd.DataFrame:
     """Extrae múltiples tablas apiladas y las consolida.
 
@@ -146,9 +140,7 @@ def extract_complex_tables(
     logger.info(f"Extrayendo tablas complejas de: {file_path}")
 
     if not structure_info:
-        raise ValueError(
-            "structure_info es requerido para extraer tablas complejas"
-        )
+        raise ValueError("structure_info es requerido para extraer tablas complejas")
 
     try:
         wb = load_workbook(file_path, read_only=True, data_only=True)
@@ -164,8 +156,8 @@ def extract_complex_tables(
 
         # Extraer cada tabla
         tables = []
-        header_rows = structure_info['header_rows']
-        data_ranges = structure_info['data_ranges']
+        header_rows = structure_info["header_rows"]
+        data_ranges = structure_info["data_ranges"]
 
         logger.info(f"Procesando {len(header_rows)} tablas")
 
@@ -173,18 +165,14 @@ def extract_complex_tables(
             zip(header_rows, data_ranges), start=1
         ):
             logger.debug(
-                f"Tabla {i}: encabezado={header_idx}, "
-                f"datos={start_row}-{end_row}"
+                f"Tabla {i}: encabezado={header_idx}, " f"datos={start_row}-{end_row}"
             )
 
             # Extraer encabezado (convertir a 0-indexed)
             header = list(all_rows[header_idx - 1])
 
-            # Limpiar encabezado (eliminar None y vacíos)
-            header = [
-                str(col).strip() if col is not None else f"Column_{idx}"
-                for idx, col in enumerate(header)
-            ]
+            # Limpiar encabezado y hacer nombres únicos (usar 'extra' para columnas inválidas)
+            header = make_unique_column_names(header)
 
             # Extraer datos
             data_rows = []
@@ -196,7 +184,7 @@ def extract_complex_tables(
 
             if data_rows:
                 # Crear DataFrame para esta tabla
-                df_table = pd.DataFrame(data_rows, columns=header[:len(data_rows[0])])
+                df_table = pd.DataFrame(data_rows, columns=header[: len(data_rows[0])])
                 tables.append(df_table)
                 logger.debug(f"Tabla {i} extraída: {len(df_table)} filas")
 
@@ -228,7 +216,7 @@ def extract_range(
     start_row: int,
     end_row: int,
     start_col: int = 1,
-    end_col: Optional[int] = None
+    end_col: Optional[int] = None,
 ) -> pd.DataFrame:
     """Extrae un rango específico de celdas como DataFrame.
 
@@ -266,7 +254,7 @@ def extract_range(
             max_row=end_row,
             min_col=start_col,
             max_col=end_col,
-            values_only=True
+            values_only=True,
         ):
             rows_data.append(list(row))
 
@@ -324,9 +312,7 @@ def extract_all_sheets(file_path: Path) -> Dict[str, pd.DataFrame]:
 
 
 def preview_data(
-    file_path: Path,
-    sheet_name: Optional[str] = None,
-    n_rows: int = 10
+    file_path: Path, sheet_name: Optional[str] = None, n_rows: int = 10
 ) -> pd.DataFrame:
     """Obtiene una vista previa de los datos (primeras n filas).
 
@@ -348,9 +334,7 @@ def preview_data(
         df = extract_data(file_path, sheet_name)
         preview_df = df.head(n_rows)
 
-        logger.info(
-            f"Preview generado: {len(preview_df)} filas de {len(df)} totales"
-        )
+        logger.info(f"Preview generado: {len(preview_df)} filas de {len(df)} totales")
 
         return preview_df
 

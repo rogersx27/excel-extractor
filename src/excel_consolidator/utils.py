@@ -2,6 +2,7 @@
 
 Este módulo proporciona funciones de apoyo para limpiar y procesar datos.
 """
+
 from pathlib import Path
 from typing import Any, List, Optional
 
@@ -30,10 +31,10 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         return df
 
     # Eliminar columnas completamente vacías
-    df = df.dropna(axis=1, how='all')
+    df = df.dropna(axis=1, how="all")
 
     # Eliminar filas completamente vacías
-    df = df.dropna(axis=0, how='all')
+    df = df.dropna(axis=0, how="all")
 
     # Reset index
     df = df.reset_index(drop=True)
@@ -57,7 +58,7 @@ def is_empty_row(row: List[Any]) -> bool:
         >>> is_empty_row([None, 'dato', None])
         False
     """
-    return all(cell is None or str(cell).strip() == '' for cell in row)
+    return all(cell is None or str(cell).strip() == "" for cell in row)
 
 
 def is_likely_header(row: List[Any]) -> bool:
@@ -82,13 +83,26 @@ def is_likely_header(row: List[Any]) -> bool:
     """
     # Palabras clave comunes en encabezados
     header_keywords = [
-        'nombre', 'dirección', 'direccion', 'telefono', 'teléfono',
-        'cliente', 'usuario', 'contacto', 'aceite', 'respel',
-        'cantidad', 'municipio', 'ruta', 'fecha', 'código', 'codigo'
+        "nombre",
+        "dirección",
+        "direccion",
+        "telefono",
+        "teléfono",
+        "cliente",
+        "usuario",
+        "contacto",
+        "aceite",
+        "respel",
+        "cantidad",
+        "municipio",
+        "ruta",
+        "fecha",
+        "código",
+        "codigo",
     ]
 
     # Filtrar valores no vacíos
-    non_empty = [cell for cell in row if cell is not None and str(cell).strip() != '']
+    non_empty = [cell for cell in row if cell is not None and str(cell).strip() != ""]
 
     if len(non_empty) < 2:
         return False
@@ -101,7 +115,7 @@ def is_likely_header(row: List[Any]) -> bool:
         cell_str = str(cell).lower().strip()
 
         # Verificar si es texto (no solo números)
-        if not cell_str.replace('.', '').replace(',', '').isdigit():
+        if not cell_str.replace(".", "").replace(",", "").isdigit():
             text_count += 1
 
         # Verificar palabras clave
@@ -176,10 +190,7 @@ def normalize_column_names(df: pd.DataFrame) -> pd.DataFrame:
         ['NOMBRE_CLIENTE', 'DIRECCION']
     """
     df = df.copy()
-    df.columns = [
-        str(col).strip().upper().replace(' ', '_')
-        for col in df.columns
-    ]
+    df.columns = [str(col).strip().upper().replace(" ", "_") for col in df.columns]
     return df
 
 
@@ -196,7 +207,45 @@ def count_non_empty_cells(row: List[Any]) -> int:
         >>> count_non_empty_cells(['A', None, 'B', ''])
         2
     """
-    return sum(
-        1 for cell in row
-        if cell is not None and str(cell).strip() != ''
-    )
+    return sum(1 for cell in row if cell is not None and str(cell).strip() != "")
+
+
+def make_unique_column_names(columns: List[Any]) -> List[str]:
+    """Crea nombres de columnas únicos, asignando 'extra' a columnas inválidas.
+
+    Args:
+        columns: Lista de nombres de columnas (pueden ser None, vacíos, o duplicados)
+
+    Returns:
+        Lista de nombres de columnas únicos y válidos
+
+    Example:
+        >>> make_unique_column_names(['NOMBRE', None, 'EDAD', '', 'NOMBRE'])
+        ['NOMBRE', 'extra_1', 'EDAD', 'extra_2', 'NOMBRE_2']
+    """
+    result = []
+    seen = {}
+    extra_counter = 1
+
+    for col in columns:
+        # Convertir a string y limpiar
+        col_str = str(col).strip() if col is not None else ""
+
+        # Si está vacío o es 'None', asignar 'extra'
+        if not col_str or col_str.lower() == "none":
+            new_name = f"extra_{extra_counter}"
+            extra_counter += 1
+        else:
+            # Verificar si ya existe
+            if col_str in seen:
+                # Agregar sufijo numérico
+                seen[col_str] += 1
+                new_name = f"{col_str}_{seen[col_str]}"
+            else:
+                # Primera vez que aparece
+                seen[col_str] = 1
+                new_name = col_str
+
+        result.append(new_name)
+
+    return result

@@ -4,6 +4,7 @@ Este módulo analiza archivos Excel para determinar si tienen:
 - Estructura simple: Una tabla con un encabezado
 - Estructura compleja: Múltiples tablas apiladas con encabezados repetidos
 """
+
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -82,11 +83,11 @@ def detect_structure(file_path: Path, sheet_name: str = None) -> Dict:
         wb.close()
 
         result = {
-            'type': structure_type,
-            'header_rows': header_rows,
-            'data_ranges': data_ranges,
-            'total_rows': total_rows,
-            'sheet_name': sheet_name
+            "type": structure_type,
+            "header_rows": header_rows,
+            "data_ranges": data_ranges,
+            "total_rows": total_rows,
+            "sheet_name": sheet_name,
         }
 
         logger.info(
@@ -133,8 +134,7 @@ def find_header_rows(rows: List[tuple]) -> List[int]:
 
 
 def determine_data_ranges(
-    rows: List[tuple],
-    header_rows: List[int]
+    rows: List[tuple], header_rows: List[int]
 ) -> List[Tuple[int, int]]:
     """Determina los rangos de filas que contienen datos.
 
@@ -190,8 +190,7 @@ def determine_data_ranges(
 
 
 def classify_structure(
-    header_rows: List[int],
-    data_ranges: List[Tuple[int, int]]
+    header_rows: List[int], data_ranges: List[Tuple[int, int]]
 ) -> str:
     """Clasifica la estructura del archivo.
 
@@ -275,14 +274,12 @@ def analyze_file_completely(file_path: Path) -> Dict:
             sheets_info[sheet] = detect_structure(file_path, sheet)
 
         result = {
-            'file_path': file_path,
-            'total_sheets': len(sheet_names),
-            'sheets': sheets_info
+            "file_path": file_path,
+            "total_sheets": len(sheet_names),
+            "sheets": sheets_info,
         }
 
-        logger.info(
-            f"Análisis completado: {len(sheet_names)} hojas procesadas"
-        )
+        logger.info(f"Análisis completado: {len(sheet_names)} hojas procesadas")
 
         return result
 

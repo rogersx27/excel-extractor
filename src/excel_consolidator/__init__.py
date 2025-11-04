@@ -31,8 +31,9 @@ Example:
 __version__ = "1.0.0"
 __author__ = "Juan P. Guevara"
 
-# Importar clase principal
+# Importar clases principales
 from .consolidator import ExcelConsolidator
+from .batch import BatchConsolidator
 
 # Importar funciones de utilidad
 from .detector import (
@@ -47,6 +48,7 @@ from .utils import (
     create_output_filename,
     ensure_output_directory,
     is_likely_header,
+    make_unique_column_names,
     normalize_column_names,
 )
 
@@ -54,8 +56,9 @@ from .utils import (
 __all__ = [
     # Versión
     "__version__",
-    # Clase principal
+    # Clases principales
     "ExcelConsolidator",
+    "BatchConsolidator",
     # Detector
     "StructureType",
     "detect_structure",
@@ -70,17 +73,14 @@ __all__ = [
     "create_output_filename",
     "ensure_output_directory",
     "is_likely_header",
+    "make_unique_column_names",
     "normalize_column_names",
     # Función helper
     "consolidate_excel_file",
 ]
 
 
-def consolidate_excel_file(
-    file_path,
-    output_dir=None,
-    suffix="_consolidado"
-):
+def consolidate_excel_file(file_path, output_dir=None, suffix="_consolidado"):
     """Función helper para consolidar un archivo Excel rápidamente.
 
     Args:
@@ -96,8 +96,5 @@ def consolidate_excel_file(
         >>> if result['success']:
         ...     print(f"Consolidado: {result['output_file']}")
     """
-    consolidator = ExcelConsolidator(
-        output_dir=output_dir,
-        suffix=suffix
-    )
+    consolidator = ExcelConsolidator(output_dir=output_dir, suffix=suffix)
     return consolidator.consolidate_file(file_path)
