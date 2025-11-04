@@ -85,3 +85,4 @@ data/processed/
 *.xltx
 *.xltm
 .claude/
+.github/
