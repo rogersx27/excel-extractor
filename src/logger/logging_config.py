@@ -111,6 +111,9 @@ def setup_logger(
     logger = logging.getLogger(name)
     logger.setLevel(getattr(logging, level.upper()))
 
+    # Deshabilitar propagación para evitar duplicados con root logger
+    logger.propagate = False
+
     # Evitar duplicados si ya está configurado
     if logger.handlers:
         return logger
@@ -263,7 +266,6 @@ def create_module_logger(module_name: str, level: str = "INFO") -> logging.Logge
     return setup_logger(module_name, level=level)
 
 
-# Configuración por defecto al importar el módulo
-# Esto asegura que siempre haya un logger configurado
-if not logging.getLogger().handlers:
-    configure_root_logger()
+# Nota: No configuramos el root logger automáticamente para evitar
+# conflictos y duplicación de logs. Si necesitas configuración global,
+# llama explícitamente a configure_root_logger() al inicio de tu aplicación.
