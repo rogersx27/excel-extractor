@@ -10,6 +10,7 @@ Python project specialized in **Excel file manipulation and data processing**. B
 ### Module Structure
 - **`src/excel_handler.py`** - Central `ExcelHandler` class with dual API: pandas (fast analysis) + openpyxl (formatting/styles)
 - **`src/excel_extractor/`** - Specialized module for splitting multi-sheet Excel files into individual files
+- **`src/find_excel_and_extract_sheets.py`** - Advanced utility for batch processing: find Excel files in directories and extract sheets with parallel/sequential/batch strategies
 - **`src/logger/`** - Custom logging system with date-based file rotation and colored console output
 - **`src/config.py`** - Path management using `pathlib.Path` with auto-directory creation
 
@@ -39,6 +40,15 @@ wb = ExcelHandler.read_excel_openpyxl(file_path)
 
 # Writing with formatting
 ExcelHandler.create_formatted_excel(df, output_path, sheet_name='Data')
+
+# Batch processing with find_excel_and_extract_sheets
+from find_excel_and_extract_sheets import find_and_extract_excel_sheets, ProcessingStrategy
+
+result = find_and_extract_excel_sheets(
+    search_directory="COMPUTADOR 1",
+    strategy=ProcessingStrategy.PARALLEL,
+    max_workers=4
+)
 ```
 
 ### Testing and Quality
@@ -101,4 +111,4 @@ When working with Excel files:
 4. **Test with** `scripts/test_excel_setup.py` after dependency changes
 5. **Follow examples** in `examples/excel_examples.py` for implementation patterns
 
-Key files to reference: `src/excel_handler.py` (main API), `examples/excel_examples.py` (usage patterns), `src/config.py` (paths/settings).
+Key files to reference: `src/excel_handler.py` (main API), `examples/excel_examples.py` (usage patterns), `src/config.py` (paths/settings), `src/find_excel_and_extract_sheets.py` (batch processing), `examples/find_excel_example.py` (batch processing examples).
