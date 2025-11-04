@@ -9,10 +9,10 @@ import pandas as pd
 import numpy as np
 
 from excel_handler import ExcelHandler, merge_excel_files, split_excel_by_column
+from logger import setup_logger
 
 # Configurar logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 def ejemplo_1_crear_excel_basico():
