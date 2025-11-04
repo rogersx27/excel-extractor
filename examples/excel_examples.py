@@ -3,16 +3,22 @@
 Este archivo contiene ejemplos de uso común para trabajar con Excel.
 """
 import logging
+import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
+  
 import pandas as pd
 import numpy as np
 
-from excel_handler import ExcelHandler, merge_excel_files, split_excel_by_column
-from logger import setup_logger
+from excel_handler import QuickExcel, ExcelHandler, merge_excel_files, split_excel_by_column
 
 # Configurar logging
-logger = setup_logger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 
 def ejemplo_1_crear_excel_basico():
@@ -31,7 +37,7 @@ def ejemplo_1_crear_excel_basico():
     # Guardar en Excel
     output_path = Path('data/ejemplo_basico.xlsx')
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    ExcelHandler.write_dataframe_to_excel(df, output_path, sheet_name='Empleados')
+    QuickExcel.write(df, output_path, sheet_name='Empleados')
 
     logger.info(f"✓ Excel básico creado: {output_path}")
 
@@ -53,7 +59,7 @@ def ejemplo_2_crear_excel_formateado():
 
     # Guardar con formato
     output_path = Path('data/ventas_formateado.xlsx')
-    ExcelHandler.create_formatted_excel(
+    QuickExcel.create_formatted(
         df,
         output_path,
         sheet_name='Ventas',
@@ -92,7 +98,7 @@ def ejemplo_3_multiples_hojas():
     }
 
     output_path = Path('data/reporte_completo.xlsx')
-    ExcelHandler.write_multiple_sheets(data, output_path)
+    QuickExcel.write_multiple_sheets(data, output_path)
 
     logger.info(f"✓ Excel con {len(data)} hojas creado: {output_path}")
 
@@ -111,7 +117,7 @@ def ejemplo_4_leer_y_procesar():
     df.to_excel(input_path, index=False)
 
     # Leer el archivo
-    df_leido = ExcelHandler.read_excel_pandas(input_path)
+    df_leido = QuickExcel.read(input_path)
     logger.info(f"Datos leídos:\n{df_leido}")
 
     # Procesar: calcular valor total del inventario
@@ -119,7 +125,7 @@ def ejemplo_4_leer_y_procesar():
 
     # Guardar resultado
     output_path = Path('data/productos_procesados.xlsx')
-    ExcelHandler.write_dataframe_to_excel(df_leido, output_path)
+    QuickExcel.write(df_leido, output_path)
 
     logger.info(f"✓ Excel procesado guardado: {output_path}")
 
@@ -132,31 +138,27 @@ def ejemplo_5_manipular_hojas():
     input_path = Path('data/ejemplo_hojas.xlsx')
     df1 = pd.DataFrame({'A': [1, 2, 3]})
     df2 = pd.DataFrame({'B': [4, 5, 6]})
-    ExcelHandler.write_multiple_sheets({'Hoja1': df1, 'Hoja2': df2}, input_path)
+    QuickExcel.write_multiple_sheets({'Hoja1': df1, 'Hoja2': df2}, input_path)
 
-    # Manipular hojas
-    handler = ExcelHandler(input_path)
-    handler.read_excel_openpyxl()
+    # Manipular hojas usando context manager
+    with ExcelHandler(input_path) as handler:
+        # Ver hojas actuales (lazy loading automático)
+        logger.info(f"Hojas actuales: {handler.sheet_names}")
 
-    # Ver hojas actuales
-    logger.info(f"Hojas actuales: {handler.get_sheet_names()}")
+        # Añadir nueva hoja
+        df_nueva = pd.DataFrame({'C': [7, 8, 9]})
+        handler.add_sheet('Hoja3', df_nueva)
 
-    # Añadir nueva hoja
-    df_nueva = pd.DataFrame({'C': [7, 8, 9]})
-    handler.add_sheet('Hoja3', df_nueva)
+        # Renombrar hoja
+        handler.rename_sheet('Hoja1', 'Datos_Iniciales')
 
-    # Renombrar hoja
-    handler.rename_sheet('Hoja1', 'Datos_Iniciales')
-
-    # Guardar cambios
-    handler.save()
-    handler.close()
+        # Guardar cambios
+        handler.save()
+    # Auto-close garantizado
 
     # Verificar cambios
-    handler2 = ExcelHandler(input_path)
-    handler2.read_excel_openpyxl()
-    logger.info(f"✓ Hojas después de manipular: {handler2.get_sheet_names()}")
-    handler2.close()
+    with ExcelHandler(input_path) as handler2:
+        logger.info(f"✓ Hojas después de manipular: {handler2.sheet_names}")
 
 
 def ejemplo_6_extraer_hojas():
@@ -170,20 +172,20 @@ def ejemplo_6_extraer_hojas():
         'Febrero': pd.DataFrame({'Ventas': [150, 250, 350]}),
         'Marzo': pd.DataFrame({'Ventas': [120, 220, 320]})
     }
-    ExcelHandler.write_multiple_sheets(data, input_path)
+    QuickExcel.write_multiple_sheets(data, input_path)
 
     # Leer todas las hojas
-    all_sheets = ExcelHandler.read_all_sheets_pandas(input_path)
+    all_sheets = QuickExcel.read_all_sheets(input_path)
     logger.info(f"Hojas encontradas: {list(all_sheets.keys())}")
 
     # Extraer hoja específica
-    handler = ExcelHandler(input_path)
-    df_febrero = handler.extract_sheet_to_dataframe('Febrero')
-    logger.info(f"Datos de Febrero:\n{df_febrero}")
+    with ExcelHandler(input_path) as handler:
+        df_febrero = handler.extract_sheet_to_dataframe('Febrero')
+        logger.info(f"Datos de Febrero:\n{df_febrero}")
 
     # Guardar hoja extraída en archivo separado
     output_path = Path('data/solo_febrero.xlsx')
-    ExcelHandler.write_dataframe_to_excel(df_febrero, output_path, sheet_name='Febrero')
+    QuickExcel.write(df_febrero, output_path, sheet_name='Febrero')
 
     logger.info(f"✓ Hoja extraída guardada: {output_path}")
 
@@ -248,16 +250,12 @@ def ejemplo_9_extraer_rango():
     df.to_excel(input_path, index=False)
 
     # Extraer rango específico (filas 2-5, columnas 1-3)
-    handler = ExcelHandler(input_path)
-    handler.read_excel_openpyxl()
-
-    # Extraer rango (nota: openpyxl usa índices 1-based)
-    range_data = handler.extract_range('Sheet1', start_row=2, start_col=1, end_row=5, end_col=3)
-    logger.info(f"Rango extraído (filas 2-5, cols 1-3):")
-    for row in range_data:
-        logger.info(f"  {row}")
-
-    handler.close()
+    with ExcelHandler(input_path) as handler:
+        # Extraer rango (nota: openpyxl usa índices 1-based)
+        range_data = handler.extract_range('Sheet1', start_row=2, start_col=1, end_row=5, end_col=3)
+        logger.info(f"Rango extraído (filas 2-5, cols 1-3):")
+        for row in range_data:
+            logger.info(f"  {row}")
 
 
 def ejemplo_10_procesamiento_avanzado():
@@ -296,7 +294,7 @@ def ejemplo_10_procesamiento_avanzado():
         'Por_Producto': resumen_producto,
         'Por_Mes': resumen_mensual
     }
-    ExcelHandler.write_multiple_sheets(analisis, output_path)
+    QuickExcel.write_multiple_sheets(analisis, output_path)
 
     logger.info(f"✓ Análisis completo guardado: {output_path}")
     logger.info(f"\nResumen por Producto:\n{resumen_producto}")
