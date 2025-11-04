@@ -84,3 +84,4 @@ data/processed/
 *.xlsb
 *.xltx
 *.xltm
+.claude/
