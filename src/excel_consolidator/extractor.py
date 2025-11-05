@@ -172,10 +172,9 @@ def extract_fecha_pattern_tables(
 
             # 1. EXTRAER METADATA de la fila FECHA
             fecha_row = all_rows[fecha_idx - 1]
-            fecha_text = str(fecha_row[0]).strip() if fecha_row[0] else ""
 
-            # Parsear metadata: FECHA: DD/MM/YYYY - DayName VEHICLE
-            metadata = parse_fecha_metadata(fecha_text)
+            # Parsear metadata (pasar toda la fila para detectar ambos patrones)
+            metadata = parse_fecha_metadata(fecha_row)
 
             # 2. EXTRAER ENCABEZADO (fila después de FECHA)
             header_idx = fecha_idx  # fecha_idx + 1 - 1 (convertir a 0-indexed)
@@ -231,48 +230,87 @@ def extract_fecha_pattern_tables(
         raise
 
 
-def parse_fecha_metadata(fecha_text: str) -> Dict[str, str]:
+def parse_fecha_metadata(fecha_row: tuple) -> Dict[str, str]:
     """Parsea la metadata de una fila FECHA.
 
+    Soporta dos patrones:
+    1. "FECHA: 09/10/2023 Lunes SWX113" en columna A
+    2. "DIA/ FECHA" en columna A, "LUNES 22/07/2024" en columnas adyacentes
+
     Args:
-        fecha_text: Texto de la fila FECHA (ej: "FECHA: 09/10/2023 Lunes SWX113")
+        fecha_row: Tupla con valores de la fila FECHA
 
     Returns:
         Dict con 'fecha', 'dia', 'vehiculo'
 
     Example:
-        >>> parse_fecha_metadata("FECHA: 09/10/2023 Lunes SWX113")
+        >>> parse_fecha_metadata(("FECHA: 09/10/2023 Lunes SWX113",))
         {'fecha': '09/10/2023', 'dia': 'Lunes', 'vehiculo': 'SWX113'}
+        >>> parse_fecha_metadata(("DIA/ FECHA", "LUNES 22/07/2024"))
+        {'fecha': '22/07/2024', 'dia': 'LUNES', 'vehiculo': ''}
     """
     import re
 
     metadata = {"fecha": "", "dia": "", "vehiculo": ""}
 
-    # Extraer fecha con regex: DD/MM/YYYY
-    fecha_match = re.search(r"(\d{1,2}/\d{1,2}/\d{4})", fecha_text)
-    if fecha_match:
-        metadata["fecha"] = fecha_match.group(1)
+    if not fecha_row or len(fecha_row) == 0:
+        return metadata
 
-    # Extraer día (palabra después de fecha, antes de vehículo)
-    # Ejemplo: "FECHA: 09/10/2023 Lunes SWX113"
-    # Quitar "FECHA:" y la fecha encontrada
-    remaining = fecha_text.upper().replace("FECHA:", "").strip()
-    if metadata["fecha"]:
-        remaining = remaining.replace(metadata["fecha"], "").strip()
+    first_cell = str(fecha_row[0]).strip() if fecha_row[0] is not None else ""
+    first_cell_upper = first_cell.upper()
 
-    # Lo que queda debería ser: "- Lunes SWX113" o "Lunes SWX113"
-    remaining = remaining.lstrip("-").strip()
+    # PATRÓN 1: "FECHA: DD/MM/YYYY DayName VEHICLE" en columna A
+    if first_cell_upper.startswith("FECHA:"):
+        # Extraer fecha con regex: DD/MM/YYYY
+        fecha_match = re.search(r"(\d{1,2}/\d{1,2}/\d{4})", first_cell)
+        if fecha_match:
+            metadata["fecha"] = fecha_match.group(1)
 
-    # Buscar códigos de vehículo conocidos
-    vehicle_match = re.search(
-        r"(SWX[-\s]?113|TLR[-\s]?886|SNY[-\s]?928|[A-Z]{3}[-\s]?\d{3})", remaining
-    )
-    if vehicle_match:
-        metadata["vehiculo"] = vehicle_match.group(1).replace(" ", "")
-        # El día está entre la fecha y el vehículo
-        dia_text = remaining[: vehicle_match.start()].strip()
-        if dia_text:
-            metadata["dia"] = dia_text
+        # Extraer día y vehículo
+        remaining = first_cell.upper().replace("FECHA:", "").strip()
+        if metadata["fecha"]:
+            remaining = remaining.replace(metadata["fecha"], "").strip()
+
+        # Lo que queda: "- Lunes SWX113" o "Lunes SWX113"
+        remaining = remaining.lstrip("-").strip()
+
+        # Buscar códigos de vehículo conocidos
+        vehicle_match = re.search(
+            r"(SWX[-\s]?113|TLR[-\s]?886|SNY[-\s]?928|[A-Z]{3}[-\s]?\d{3})", remaining
+        )
+        if vehicle_match:
+            metadata["vehiculo"] = vehicle_match.group(1).replace(" ", "")
+            # El día está entre la fecha y el vehículo
+            dia_text = remaining[: vehicle_match.start()].strip()
+            if dia_text:
+                metadata["dia"] = dia_text
+
+    # PATRÓN 2: "DIA/ FECHA" en columna A, fecha en columnas adyacentes
+    elif "DIA" in first_cell_upper and "FECHA" in first_cell_upper:
+        # Buscar fecha y día en las siguientes columnas
+        for cell in fecha_row[1:5]:
+            if cell:
+                cell_str = str(cell).strip()
+
+                # Buscar fecha DD/MM/YYYY
+                fecha_match = re.search(r"(\d{1,2}/\d{1,2}/\d{4})", cell_str)
+                if fecha_match and not metadata["fecha"]:
+                    metadata["fecha"] = fecha_match.group(1)
+
+                # Extraer día (palabra antes de la fecha)
+                # Ejemplo: "LUNES 22/07/2024"
+                if fecha_match:
+                    dia_text = cell_str[: fecha_match.start()].strip().upper()
+                    if dia_text and not metadata["dia"]:
+                        metadata["dia"] = dia_text
+
+                # Buscar vehículo
+                vehicle_match = re.search(
+                    r"(SWX[-\s]?113|TLR[-\s]?886|SNY[-\s]?928|[A-Z]{3}[-\s]?\d{3})",
+                    cell_str,
+                )
+                if vehicle_match and not metadata["vehiculo"]:
+                    metadata["vehiculo"] = vehicle_match.group(1).replace(" ", "")
 
     logger.debug(f"Metadata parseada: {metadata}")
     return metadata

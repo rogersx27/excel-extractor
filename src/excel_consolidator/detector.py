@@ -111,30 +111,54 @@ def detect_structure(file_path: Path, sheet_name: str = None) -> Dict:
 
 
 def find_fecha_rows(rows: List[tuple]) -> List[int]:
-    """Encuentra filas que contienen el patrón "FECHA:" como ancla de bloques.
+    """Encuentra filas que contienen patrones de FECHA como ancla de bloques.
+
+    Detecta dos patrones:
+    1. "FECHA: DD/MM/YYYY ..." en columna A
+    2. "DIA/ FECHA" en columna A (con fecha en columnas adyacentes)
 
     Args:
         rows: Lista de tuplas con valores de filas
 
     Returns:
-        Lista de índices (1-based) de filas que contienen "FECHA:"
+        Lista de índices (1-based) de filas que contienen patrones FECHA
 
     Example:
-        >>> rows = [(None,), ('FECHA: 09/10/2023 Lunes SWX113',), ('DATA',)]
+        >>> rows = [(None,), ('FECHA: 09/10/2023 Lunes SWX113',), ('DIA/ FECHA', 'LUNES 22/07/2024')]
         >>> find_fecha_rows(rows)
-        [2]
+        [2, 3]
     """
+    import re
+
     fecha_rows = []
 
     for idx, row in enumerate(rows, start=1):
-        # Verificar la primera celda (columna A, índice 0)
         if row and len(row) > 0:
             first_cell = str(row[0]).strip() if row[0] is not None else ""
+            first_cell_upper = first_cell.upper()
 
-            # Buscar patrón "FECHA:" al inicio de la celda
-            if first_cell.upper().startswith("FECHA:"):
+            # PATRÓN 1: "FECHA: DD/MM/YYYY ..." en columna A
+            if first_cell_upper.startswith("FECHA:"):
                 fecha_rows.append(idx)
-                logger.debug(f"Bloque FECHA encontrado en fila {idx}: {first_cell[:50]}")
+                logger.debug(f"Bloque FECHA (patrón 1) en fila {idx}: {first_cell[:50]}")
+                continue
+
+            # PATRÓN 2: "DIA/ FECHA" o "DIA / FECHA" o "DIA/FECHA" en columna A
+            # Buscar si contiene ambas palabras "DIA" y "FECHA"
+            if "DIA" in first_cell_upper and "FECHA" in first_cell_upper:
+                # Verificar que hay una fecha en columnas adyacentes
+                has_date_nearby = False
+                for cell in row[1:5]:  # Revisar las siguientes 4 columnas
+                    if cell:
+                        cell_str = str(cell).strip()
+                        # Buscar patrón de fecha DD/MM/YYYY
+                        if re.search(r"\d{1,2}/\d{1,2}/\d{4}", cell_str):
+                            has_date_nearby = True
+                            break
+
+                if has_date_nearby:
+                    fecha_rows.append(idx)
+                    logger.debug(f"Bloque FECHA (patrón 2) en fila {idx}: {first_cell}")
 
     return fecha_rows
 
