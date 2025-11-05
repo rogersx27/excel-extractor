@@ -10,8 +10,13 @@ import pandas as pd
 
 from logger import setup_logger
 
-# Configurar logger para este módulo
-logger = setup_logger(__name__, level="INFO", console_output=False)
+# Logger Nivel 2 - Coordinador: INFO con consola y archivo, orquesta extracción de hojas
+logger = setup_logger(
+    __name__,
+    level="INFO",
+    console_output=True,
+    file_output=True
+)
 
 
 class ExcelSheetExtractor:

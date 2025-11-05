@@ -16,7 +16,13 @@ from .detector import detect_structure
 from .extractor import extract_data
 from .utils import create_output_filename, ensure_output_directory
 
-logger = setup_logger(__name__)
+# Logger Nivel 2 - Coordinador: INFO con consola y archivo, orquesta consolidación
+logger = setup_logger(
+    __name__,
+    level="INFO",
+    console_output=True,
+    file_output=True
+)
 
 
 class ExcelConsolidator:

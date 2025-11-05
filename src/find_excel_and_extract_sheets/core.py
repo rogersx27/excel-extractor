@@ -11,8 +11,13 @@ from typing import Dict, List, Optional, Union
 from excel_extractor import extract_excel_sheets
 from logger import setup_logger
 
-# Configurar logger
-logger = setup_logger(__name__)
+# Logger Nivel 2 - Coordinador: INFO con consola y archivo, orquesta búsqueda y extracción
+logger = setup_logger(
+    __name__,
+    level="INFO",
+    console_output=True,
+    file_output=True
+)
 
 
 class ExcelProcessor:

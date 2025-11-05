@@ -34,7 +34,13 @@ from .exceptions import (
     SheetNotFoundError,
 )
 
-logger = setup_logger(__name__)
+# Logger Nivel 3 - Procesador: INFO solo archivo, manipula Excel sin saturar consola
+logger = setup_logger(
+    __name__,
+    level="INFO",
+    console_output=False,
+    file_output=True
+)
 
 
 class ExcelHandler:

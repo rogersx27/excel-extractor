@@ -19,8 +19,13 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 from find_excel_and_extract_sheets import find_and_extract_excel_sheets, scan_directory
 from logger import setup_logger
 
-# Configurar logger
-logger = setup_logger(__name__, level="INFO")
+# Logger Nivel 1 - CLI: INFO con consola y archivo para interacción con usuario
+logger = setup_logger(
+    __name__,
+    level="INFO",
+    console_output=True,
+    file_output=True
+)
 
 
 def main():

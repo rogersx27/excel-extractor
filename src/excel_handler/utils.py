@@ -13,7 +13,13 @@ import pandas as pd
 from logger import setup_logger
 from .exceptions import EmptyDataError, FileOperationError
 
-logger = setup_logger(__name__)
+# Logger Nivel 4 - Utilidades: WARNING solo archivo, helpers silenciosos
+logger = setup_logger(
+    __name__,
+    level="WARNING",
+    console_output=False,
+    file_output=True
+)
 
 
 def merge_excel_files(

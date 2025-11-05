@@ -22,7 +22,13 @@ import xlsxwriter
 from logger import setup_logger
 from .exceptions import EmptyDataError, InvalidFileFormatError
 
-logger = setup_logger(__name__)
+# Logger Nivel 3 - Procesador: INFO solo archivo, operaciones rápidas sin saturar consola
+logger = setup_logger(
+    __name__,
+    level="INFO",
+    console_output=False,
+    file_output=True
+)
 
 
 class QuickExcel:

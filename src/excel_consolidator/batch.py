@@ -13,7 +13,13 @@ from logger import setup_logger
 
 from .consolidator import ExcelConsolidator
 
-logger = setup_logger(__name__)
+# Logger Nivel 2 - Coordinador: INFO con consola y archivo, orquesta batch processing
+logger = setup_logger(
+    __name__,
+    level="INFO",
+    console_output=True,
+    file_output=True
+)
 
 
 class BatchConsolidator:

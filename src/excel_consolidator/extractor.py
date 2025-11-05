@@ -16,7 +16,13 @@ from logger import setup_logger
 from .detector import StructureType, detect_structure
 from .utils import clean_dataframe, is_empty_row
 
-logger = setup_logger(__name__)
+# Logger Nivel 3 - Procesador: INFO solo archivo, extrae datos sin saturar consola
+logger = setup_logger(
+    __name__,
+    level="INFO",
+    console_output=False,
+    file_output=True
+)
 
 
 def extract_data(
