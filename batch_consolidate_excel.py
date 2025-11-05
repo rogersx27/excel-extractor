@@ -27,6 +27,21 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from excel_consolidator import BatchConsolidator
 from logger import setup_logger, setup_cli_logger
+from logger.pretty import (
+    log_header,
+    log_section,
+    log_info,
+    log_success,
+    log_error,
+    log_warning,
+    log_item,
+    log_stats,
+    log_blank,
+    log_separator,
+    format_number,
+    format_duration,
+    indent
+)
 
 # Logger Nivel 1 - CLI: Configuración dinámica desde variables de entorno
 logger = setup_cli_logger(setup_logger, __name__)
@@ -138,26 +153,29 @@ Ejemplos de uso:
     # Validar directorio
     directory = Path(args.directory)
     if not directory.exists():
-        logger.error(f"❌ El directorio no existe: {directory}")
+        log_error(logger, f"El directorio no existe: {directory}")
         sys.exit(1)
 
     if not directory.is_dir():
-        logger.error(f"❌ La ruta no es un directorio: {directory}")
+        log_error(logger, f"La ruta no es un directorio: {directory}")
         sys.exit(1)
 
     # Información inicial
-    logger.info(f"\n{'='*60}")
-    logger.info("🚀 CONSOLIDACIÓN BATCH DE ARCHIVOS EXCEL")
-    logger.info(f"{'='*60}")
-    logger.info(f"📁 Directorio: {directory}")
-    logger.info(f"📋 Patrón: {args.pattern}")
-    logger.info(f"🔄 Recursivo: {not args.no_recursive}")
-    logger.info(f"⚡ Paralelo: {args.parallel}")
-    if args.parallel:
-        logger.info(f"👷 Workers: {args.workers}")
-    if args.dry_run:
-        logger.info(f"🔍 Modo: DRY-RUN (simulación)")
-    logger.info(f"{'='*60}\n")
+    log_blank(logger)
+    log_header(logger, "CONSOLIDACIÓN BATCH DE ARCHIVOS EXCEL", icon="🚀")
+    
+    log_section(logger, "Configuración", icon="⚙️")
+    with indent():
+        log_item(logger, "Directorio", directory)
+        log_item(logger, "Patrón", args.pattern)
+        log_item(logger, "Recursivo", "Sí" if not args.no_recursive else "No")
+        log_item(logger, "Paralelo", "Sí" if args.parallel else "No")
+        if args.parallel:
+            log_item(logger, "Workers", args.workers)
+        if args.dry_run:
+            log_item(logger, "Modo", "DRY-RUN (simulación)", bullet="└─")
+        
+    log_blank(logger)
 
     # Crear consolidador batch
     batch = BatchConsolidator(
@@ -177,11 +195,10 @@ Ejemplos de uso:
             dry_run=args.dry_run
         )
 
-        # Mostrar archivos procesados exitosamente
+                # Mostrar archivos procesados exitosamente
         if result['successful'] > 0:
-            logger.info(f"\n{'='*60}")
-            logger.info("✅ ARCHIVOS CONSOLIDADOS EXITOSAMENTE")
-            logger.info(f"{'='*60}")
+            log_blank(logger)
+            log_section(logger, "ARCHIVOS CONSOLIDADOS EXITOSAMENTE", icon="✅")
 
             successful_results = [r for r in result['results'] if r['success']]
 
@@ -193,53 +210,66 @@ Ejemplos de uso:
                 by_directory[dir_name].append(r)
 
             for dir_name, files in by_directory.items():
-                logger.info(f"\n📂 {dir_name}/")
-                for r in files:
-                    logger.info(f"  ✅ {r['input_file'].name}")
-                    if not args.dry_run:
-                        logger.info(f"     📊 {r['rows_extracted']} filas extraídas")
-                        logger.info(f"     ⏱️  {r['processing_time']:.2f}s")
+                log_blank(logger)
+                log_section(logger, f"{dir_name}/", icon="📂")
+                
+                with indent():
+                    for r in files:
+                        log_success(logger, r['input_file'].name)
+                        if not args.dry_run:
+                            with indent():
+                                log_item(logger, "Filas extraídas", format_number(r['rows_extracted']))
+                                log_item(logger, "Tiempo", f"{r['processing_time']:.2f}s", bullet="└─")
 
         # Mostrar errores si los hay
         if result['failed'] > 0:
-            logger.info(f"\n{'='*60}")
-            logger.info("❌ ARCHIVOS CON ERRORES")
-            logger.info(f"{'='*60}")
+            log_blank(logger)
+            log_section(logger, "ARCHIVOS CON ERRORES", icon="❌")
 
             failed_results = [r for r in result['results'] if not r['success'] and r.get('error')]
-            for r in failed_results:
-                logger.error(f"\n📄 {r['input_file'].name}")
-                logger.error(f"   Error: {r['error']}")
+            
+            with indent():
+                for r in failed_results:
+                    log_blank(logger)
+                    log_error(logger, r['input_file'].name)
+                    with indent():
+                        log_item(logger, "Error", r['error'], bullet="└─")
 
         # Resumen final
-        logger.info(f"\n{'='*60}")
-        logger.info("📊 RESUMEN FINAL")
-        logger.info(f"{'='*60}")
-        logger.info(f"📁 Directorios procesados: {result['directories_processed']}")
-        logger.info(f"📄 Total archivos: {result['total_files']}")
-        logger.info(f"✅ Exitosos: {result['successful']}")
-        logger.info(f"❌ Fallidos: {result['failed']}")
-        logger.info(f"📈 Tasa de éxito: {result['success_rate']:.1f}%")
-        logger.info(f"⏱️  Tiempo total: {result['total_time']:.2f}s")
+        log_blank(logger)
+        log_stats(logger, {
+            "Directorios procesados": result['directories_processed'],
+            "Total archivos": format_number(result['total_files']),
+            "Exitosos": format_number(result['successful']),
+            "Fallidos": result['failed'],
+            "Tasa de éxito": f"{result['success_rate']:.1f}%",
+            "Tiempo total": format_duration(result['total_time'])
+        }, title="RESUMEN FINAL")
 
         if result['total_files'] > 0:
             avg_time = result['total_time'] / result['total_files']
-            logger.info(f"⚡ Tiempo promedio: {avg_time:.2f}s por archivo")
+            log_blank(logger)
+            with indent():
+                log_item(logger, "Tiempo promedio", f"{avg_time:.2f}s por archivo", bullet="└─")
 
         # Información de salida
         if not args.dry_run and result['successful'] > 0:
-            logger.info(f"\n📁 Archivos consolidados guardados en:")
-            logger.info(f"   {directory / args.subdir}/")
+            log_blank(logger)
+            log_section(logger, "Archivos consolidados guardados en:", icon="📁")
+            with indent():
+                log_item(logger, "Ubicación", directory / args.subdir, bullet="└─")
 
         # Código de salida
         sys.exit(0 if result['failed'] == 0 else 1)
 
     except KeyboardInterrupt:
-        logger.warning("\n\n⚠️  Proceso interrumpido por el usuario")
+        log_blank(logger, lines=2)
+        log_warning(logger, "Proceso interrumpido por el usuario")
         sys.exit(130)
 
     except Exception as e:
-        logger.error(f"\n\n❌ Error durante el procesamiento: {e}")
+        log_blank(logger, lines=2)
+        log_error(logger, f"Error durante el procesamiento: {e}")
         if args.verbose:
             import traceback
             traceback.print_exc()
