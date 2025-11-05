@@ -28,7 +28,21 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from excel_consolidator import ExcelConsolidator, analyze_file_completely
-from logger import setup_logger, setup_cli_logger
+from logger import (
+    setup_logger,
+    setup_cli_logger,
+    log_header,
+    log_section,
+    log_file_info,
+    log_sheet_info,
+    log_success,
+    log_error,
+    log_item,
+    log_stats,
+    log_blank,
+    indent,
+    format_number,
+)
 
 # Logger Nivel 1 - CLI: Configuración dinámica desde variables de entorno
 logger = setup_cli_logger(setup_logger, __name__)
@@ -134,42 +148,49 @@ Ejemplos de uso:
     # Validar ruta
     path = Path(args.path)
     if not path.exists():
-        logger.error(f"❌ La ruta no existe: {path}")
+        log_error(logger, f"La ruta no existe: {path}")
         sys.exit(1)
 
     # Modo análisis solamente
     if args.analyze_only:
-        logger.info(f"\n{'='*60}")
-        logger.info("📊 MODO ANÁLISIS (sin consolidar)")
-        logger.info(f"{'='*60}\n")
+        log_blank(logger)
+        log_header(logger, "MODO ANÁLISIS (sin consolidar)", icon="📊")
 
         if path.is_file():
-            logger.info(f"Analizando archivo: {path.name}")
+            # Analizar archivo
             analysis = analyze_file_completely(path)
 
-            logger.info(f"\n📄 Archivo: {path.name}")
-            logger.info(f"   Hojas: {analysis['total_sheets']}")
+            # Mostrar información del archivo
+            log_file_info(logger, path.name, {"Hojas": analysis['total_sheets']})
 
+            # Mostrar información de cada hoja
             for sheet, info in analysis['sheets'].items():
-                logger.info(f"\n   📋 Hoja: {sheet}")
-                logger.info(f"      Tipo: {info['type'].upper()}")
-                logger.info(f"      Encabezados: {len(info['header_rows'])}")
-                logger.info(f"      Filas totales: {info['total_rows']}")
+                log_blank(logger)
+
+                sheet_data = {
+                    "Tipo": info['type'].upper(),
+                    "Encabezados": len(info['header_rows']),
+                    "Filas totales": format_number(info['total_rows']),
+                }
 
                 if info['header_rows']:
-                    logger.info(f"      Encabezados en filas: {info['header_rows']}")
+                    sheet_data["Encabezados en filas"] = info['header_rows']
                 if info['data_ranges']:
-                    logger.info(f"      Rangos de datos: {info['data_ranges']}")
+                    sheet_data["Rangos de datos"] = f"{len(info['data_ranges'])} rangos"
+
+                log_sheet_info(logger, sheet, sheet_data)
+
+            log_blank(logger)
+            log_success(logger, "Análisis completado")
         else:
-            logger.error("❌ Modo análisis solo soporta archivos individuales")
+            log_error(logger, "Modo análisis solo soporta archivos individuales")
             sys.exit(1)
 
         sys.exit(0)
 
     # Modo consolidación
-    logger.info(f"\n{'='*60}")
-    logger.info("🚀 CONSOLIDADOR DE EXCEL")
-    logger.info(f"{'='*60}\n")
+    log_blank(logger)
+    log_header(logger, "CONSOLIDADOR DE EXCEL", icon="🚀")
 
     # Crear consolidador
     consolidator = ExcelConsolidator(
@@ -181,24 +202,30 @@ Ejemplos de uso:
     # Procesar archivo o directorio
     if path.is_file():
         # Consolidar archivo individual
-        logger.info(f"📄 Consolidando archivo: {path.name}\n")
+        log_section(logger, f"Consolidando archivo: {path.name}", icon="📄")
+        log_blank(logger)
+
         result = consolidator.consolidate_file(path)
 
         if result['success']:
-            logger.info(f"\n✅ CONSOLIDACIÓN EXITOSA")
-            logger.info(f"   📊 Filas extraídas: {result['rows_extracted']}")
-            logger.info(f"   📋 Columnas: {len(result['columns'])}")
-            logger.info(f"   📁 Archivo guardado: {result['output_file']}")
-            logger.info(f"   ⏱️  Tiempo: {result['processing_time']:.2f}s")
+            log_blank(logger)
+            log_stats(logger, {
+                "Estado": "✅ Exitoso",
+                "Filas extraídas": format_number(result['rows_extracted']),
+                "Columnas": len(result['columns']),
+                "Archivo guardado": result['output_file'].name,
+                "Tiempo": f"{result['processing_time']:.2f}s"
+            }, title="Resultado de Consolidación")
             sys.exit(0)
         else:
-            logger.error(f"\n❌ ERROR EN CONSOLIDACIÓN")
-            logger.error(f"   {result['error']}")
+            log_blank(logger)
+            log_error(logger, f"Error en consolidación: {result['error']}")
             sys.exit(1)
 
     elif path.is_dir():
         # Consolidar directorio
-        logger.info(f"📁 Consolidando directorio: {path}\n")
+        log_section(logger, f"Consolidando directorio: {path}", icon="📁")
+        log_blank(logger)
 
         summary = consolidator.consolidate_directory(
             directory=path,
@@ -207,35 +234,46 @@ Ejemplos de uso:
             exclude_patterns=args.exclude
         )
 
+        # Mostrar resumen general
+        log_blank(logger)
+        log_stats(logger, {
+            "Total archivos": summary['total_files'],
+            "Exitosos": f"✅ {summary['successful']}",
+            "Fallidos": f"❌ {summary['failed']}",
+            "Omitidos": summary['skipped'],
+        }, title="Resumen General")
+
         # Mostrar detalles de archivos exitosos
         if summary['successful'] > 0:
-            logger.info(f"\n{'='*60}")
-            logger.info("✅ ARCHIVOS CONSOLIDADOS EXITOSAMENTE")
-            logger.info(f"{'='*60}")
+            log_blank(logger)
+            log_section(logger, "Archivos Consolidados Exitosamente", icon="✅")
 
-            for result in summary['results']:
-                if result['success']:
-                    logger.info(f"\n📄 {result['input_file'].name}")
-                    logger.info(f"   📊 Filas: {result['rows_extracted']}")
-                    logger.info(f"   📋 Columnas: {len(result['columns'])}")
-                    logger.info(f"   ⏱️  Tiempo: {result['processing_time']:.2f}s")
+            with indent():
+                for result in summary['results']:
+                    if result['success']:
+                        log_blank(logger)
+                        log_file_info(logger, result['input_file'].name, {
+                            "Filas": format_number(result['rows_extracted']),
+                            "Columnas": len(result['columns']),
+                            "Tiempo": f"{result['processing_time']:.2f}s"
+                        })
 
         # Mostrar errores si los hay
         if summary['failed'] > 0:
-            logger.info(f"\n{'='*60}")
-            logger.info("❌ ARCHIVOS CON ERRORES")
-            logger.info(f"{'='*60}")
+            log_blank(logger)
+            log_section(logger, "Archivos con Errores", icon="❌")
 
-            for result in summary['results']:
-                if not result['success']:
-                    logger.error(f"\n📄 {result['input_file'].name}")
-                    logger.error(f"   Error: {result['error']}")
+            with indent():
+                for result in summary['results']:
+                    if not result['success']:
+                        log_blank(logger)
+                        log_error(logger, f"{result['input_file'].name}: {result['error']}")
 
         # Código de salida
         sys.exit(0 if summary['failed'] == 0 else 1)
 
     else:
-        logger.error(f"❌ La ruta debe ser un archivo o directorio: {path}")
+        log_error(logger, f"La ruta debe ser un archivo o directorio: {path}")
         sys.exit(1)
 
 
