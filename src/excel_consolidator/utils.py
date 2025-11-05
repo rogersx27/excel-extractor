@@ -99,6 +99,18 @@ def is_likely_header(row: List[Any]) -> bool:
         "fecha",
         "código",
         "codigo",
+        "NIT",
+        "EMPRESA",
+        "DIRECCION",
+        "SECTOR",
+        "ENCARGADO",
+        "TELEFONOS",
+        "CORREOS",
+        "FRECUENCIA",
+        "OBSERVACIONES",
+        "PRODUCTO Y CANTIDAD",
+        "FECHA ULTIMA LLAMADA",
+        "FECHA DE RECOLECCION"
     ]
 
     # Filtrar valores no vacíos

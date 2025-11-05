@@ -22,6 +22,7 @@ class StructureType:
 
     SIMPLE = "simple"
     COMPLEX = "complex"
+    COMPLEX_FECHA = "complex_fecha"  # Patrón con bloques FECHA:
     UNKNOWN = "unknown"
 
 
@@ -71,14 +72,20 @@ def detect_structure(file_path: Path, sheet_name: str = None) -> Dict:
 
         total_rows = len(all_rows)
 
-        # Buscar encabezados
-        header_rows = find_header_rows(all_rows)
+        # PRIORIDAD 1: Buscar patrón FECHA: (más específico y confiable)
+        fecha_rows = find_fecha_rows(all_rows)
 
-        # Determinar rangos de datos
-        data_ranges = determine_data_ranges(all_rows, header_rows)
-
-        # Determinar tipo de estructura
-        structure_type = classify_structure(header_rows, data_ranges)
+        if fecha_rows:
+            # Usar patrón FECHA como anclas
+            logger.info(f"Patrón FECHA detectado: {len(fecha_rows)} bloques encontrados")
+            header_rows = [fr + 1 for fr in fecha_rows]  # Header está después de FECHA
+            data_ranges = determine_data_ranges_fecha(all_rows, fecha_rows)
+            structure_type = StructureType.COMPLEX_FECHA
+        else:
+            # PRIORIDAD 2: Buscar encabezados genéricos (método anterior)
+            header_rows = find_header_rows(all_rows)
+            data_ranges = determine_data_ranges(all_rows, header_rows)
+            structure_type = classify_structure(header_rows, data_ranges)
 
         wb.close()
 
@@ -88,6 +95,7 @@ def detect_structure(file_path: Path, sheet_name: str = None) -> Dict:
             "data_ranges": data_ranges,
             "total_rows": total_rows,
             "sheet_name": sheet_name,
+            "fecha_rows": fecha_rows if fecha_rows else [],  # Anclas FECHA
         }
 
         logger.info(
@@ -100,6 +108,35 @@ def detect_structure(file_path: Path, sheet_name: str = None) -> Dict:
     except Exception as e:
         logger.error(f"Error detectando estructura de {file_path}: {e}")
         raise
+
+
+def find_fecha_rows(rows: List[tuple]) -> List[int]:
+    """Encuentra filas que contienen el patrón "FECHA:" como ancla de bloques.
+
+    Args:
+        rows: Lista de tuplas con valores de filas
+
+    Returns:
+        Lista de índices (1-based) de filas que contienen "FECHA:"
+
+    Example:
+        >>> rows = [(None,), ('FECHA: 09/10/2023 Lunes SWX113',), ('DATA',)]
+        >>> find_fecha_rows(rows)
+        [2]
+    """
+    fecha_rows = []
+
+    for idx, row in enumerate(rows, start=1):
+        # Verificar la primera celda (columna A, índice 0)
+        if row and len(row) > 0:
+            first_cell = str(row[0]).strip() if row[0] is not None else ""
+
+            # Buscar patrón "FECHA:" al inicio de la celda
+            if first_cell.upper().startswith("FECHA:"):
+                fecha_rows.append(idx)
+                logger.debug(f"Bloque FECHA encontrado en fila {idx}: {first_cell[:50]}")
+
+    return fecha_rows
 
 
 def find_header_rows(rows: List[tuple]) -> List[int]:
@@ -131,6 +168,54 @@ def find_header_rows(rows: List[tuple]) -> List[int]:
             logger.debug(f"Encabezado encontrado en fila {idx}")
 
     return header_rows
+
+
+def determine_data_ranges_fecha(
+    rows: List[tuple], fecha_rows: List[int]
+) -> List[Tuple[int, int]]:
+    """Determina rangos de datos basados en filas FECHA como anclas.
+
+    Args:
+        rows: Lista de tuplas con valores de filas
+        fecha_rows: Índices de filas con "FECHA:"
+
+    Returns:
+        Lista de tuplas (start_row, end_row) con rangos de datos
+
+    Example:
+        >>> fecha_rows = [5, 20, 35]
+        >>> determine_data_ranges_fecha(rows, fecha_rows)
+        [(7, 18), (22, 33), (37, 50)]
+    """
+    data_ranges = []
+
+    for i, fecha_idx in enumerate(fecha_rows):
+        # Datos comienzan 2 filas después de FECHA (FECHA + 1 = header, FECHA + 2 = datos)
+        start_row = fecha_idx + 2
+
+        # Determinar fin del rango
+        if i < len(fecha_rows) - 1:
+            # Hay otro bloque FECHA después, buscar hasta la fila anterior
+            next_fecha = fecha_rows[i + 1]
+            end_row = next_fecha - 1
+        else:
+            # Último bloque FECHA, ir hasta el final
+            end_row = len(rows)
+
+        # Ajustar end_row para excluir filas vacías al final
+        while end_row > start_row:
+            if not is_empty_row(list(rows[end_row - 1])):
+                break
+            end_row -= 1
+
+        if start_row <= end_row:
+            data_ranges.append((start_row, end_row))
+            logger.debug(
+                f"Bloque FECHA {i+1}: fila FECHA={fecha_idx}, "
+                f"datos={start_row}-{end_row}"
+            )
+
+    return data_ranges
 
 
 def determine_data_ranges(

@@ -55,6 +55,8 @@ def extract_data(
     # Seleccionar método de extracción
     if structure_type == StructureType.SIMPLE:
         df = extract_simple_table(file_path, sheet_name, structure_info)
+    elif structure_type == StructureType.COMPLEX_FECHA:
+        df = extract_fecha_pattern_tables(file_path, sheet_name, structure_info)
     elif structure_type == StructureType.COMPLEX:
         df = extract_complex_tables(file_path, sheet_name, structure_info)
     else:
@@ -116,6 +118,164 @@ def extract_simple_table(
     except Exception as e:
         logger.error(f"Error extrayendo tabla simple de {file_path}: {e}")
         raise
+
+
+def extract_fecha_pattern_tables(
+    file_path: Path,
+    sheet_name: Optional[str] = None,
+    structure_info: Optional[Dict] = None,
+) -> pd.DataFrame:
+    """Extrae múltiples bloques con patrón FECHA y agrega metadata.
+
+    Args:
+        file_path: Ruta al archivo Excel
+        sheet_name: Nombre de la hoja
+        structure_info: Información de estructura (requerida)
+
+    Returns:
+        DataFrame con todas las tablas consolidadas y columnas de metadata
+
+    Example:
+        >>> info = detect_structure(Path('rutas.xlsx'))
+        >>> df = extract_fecha_pattern_tables(Path('rutas.xlsx'), structure_info=info)
+    """
+    import re
+
+    logger.info(f"Extrayendo bloques con patrón FECHA de: {file_path}")
+
+    if not structure_info:
+        raise ValueError("structure_info es requerido para extraer patrón FECHA")
+
+    try:
+        wb = load_workbook(file_path, read_only=True, data_only=True)
+
+        # Seleccionar hoja
+        if sheet_name:
+            ws = wb[sheet_name]
+        else:
+            ws = wb.active
+
+        # Leer todas las filas
+        all_rows = list(ws.iter_rows(values_only=True))
+
+        # Extraer cada bloque
+        tables = []
+        fecha_rows = structure_info["fecha_rows"]
+        data_ranges = structure_info["data_ranges"]
+
+        logger.info(f"Procesando {len(fecha_rows)} bloques FECHA")
+
+        for i, (fecha_idx, (start_row, end_row)) in enumerate(
+            zip(fecha_rows, data_ranges), start=1
+        ):
+            logger.debug(f"Bloque {i}: FECHA fila={fecha_idx}, datos={start_row}-{end_row}")
+
+            # 1. EXTRAER METADATA de la fila FECHA
+            fecha_row = all_rows[fecha_idx - 1]
+            fecha_text = str(fecha_row[0]).strip() if fecha_row[0] else ""
+
+            # Parsear metadata: FECHA: DD/MM/YYYY - DayName VEHICLE
+            metadata = parse_fecha_metadata(fecha_text)
+
+            # 2. EXTRAER ENCABEZADO (fila después de FECHA)
+            header_idx = fecha_idx  # fecha_idx + 1 - 1 (convertir a 0-indexed)
+            header = list(all_rows[header_idx])
+
+            # Limpiar encabezado
+            header = [
+                str(col).strip() if col is not None else f"Column_{idx}"
+                for idx, col in enumerate(header)
+            ]
+
+            # 3. EXTRAER DATOS
+            data_rows = []
+            for row_idx in range(start_row - 1, end_row):
+                if row_idx < len(all_rows):
+                    row = list(all_rows[row_idx])
+                    if not is_empty_row(row):
+                        data_rows.append(row)
+
+            if data_rows:
+                # Crear DataFrame para este bloque
+                df_table = pd.DataFrame(data_rows, columns=header[: len(data_rows[0])])
+
+                # Agregar columnas de metadata al principio
+                df_table.insert(0, "fecha", metadata["fecha"])
+                df_table.insert(1, "dia", metadata["dia"])
+                df_table.insert(2, "vehiculo", metadata["vehiculo"])
+
+                tables.append(df_table)
+                logger.debug(
+                    f"Bloque {i} extraído: {len(df_table)} filas, "
+                    f"fecha={metadata['fecha']}, vehiculo={metadata['vehiculo']}"
+                )
+
+        wb.close()
+
+        # Consolidar todas las tablas
+        if not tables:
+            logger.warning("No se extrajeron bloques FECHA, retornando DataFrame vacío")
+            return pd.DataFrame()
+
+        df_consolidated = pd.concat(tables, ignore_index=True, sort=False)
+
+        logger.info(
+            f"Bloques FECHA consolidados: {len(tables)} bloques → "
+            f"{len(df_consolidated)} filas totales"
+        )
+
+        return df_consolidated
+
+    except Exception as e:
+        logger.error(f"Error extrayendo bloques FECHA de {file_path}: {e}")
+        raise
+
+
+def parse_fecha_metadata(fecha_text: str) -> Dict[str, str]:
+    """Parsea la metadata de una fila FECHA.
+
+    Args:
+        fecha_text: Texto de la fila FECHA (ej: "FECHA: 09/10/2023 Lunes SWX113")
+
+    Returns:
+        Dict con 'fecha', 'dia', 'vehiculo'
+
+    Example:
+        >>> parse_fecha_metadata("FECHA: 09/10/2023 Lunes SWX113")
+        {'fecha': '09/10/2023', 'dia': 'Lunes', 'vehiculo': 'SWX113'}
+    """
+    import re
+
+    metadata = {"fecha": "", "dia": "", "vehiculo": ""}
+
+    # Extraer fecha con regex: DD/MM/YYYY
+    fecha_match = re.search(r"(\d{1,2}/\d{1,2}/\d{4})", fecha_text)
+    if fecha_match:
+        metadata["fecha"] = fecha_match.group(1)
+
+    # Extraer día (palabra después de fecha, antes de vehículo)
+    # Ejemplo: "FECHA: 09/10/2023 Lunes SWX113"
+    # Quitar "FECHA:" y la fecha encontrada
+    remaining = fecha_text.upper().replace("FECHA:", "").strip()
+    if metadata["fecha"]:
+        remaining = remaining.replace(metadata["fecha"], "").strip()
+
+    # Lo que queda debería ser: "- Lunes SWX113" o "Lunes SWX113"
+    remaining = remaining.lstrip("-").strip()
+
+    # Buscar códigos de vehículo conocidos
+    vehicle_match = re.search(
+        r"(SWX[-\s]?113|TLR[-\s]?886|SNY[-\s]?928|[A-Z]{3}[-\s]?\d{3})", remaining
+    )
+    if vehicle_match:
+        metadata["vehiculo"] = vehicle_match.group(1).replace(" ", "")
+        # El día está entre la fecha y el vehículo
+        dia_text = remaining[: vehicle_match.start()].strip()
+        if dia_text:
+            metadata["dia"] = dia_text
+
+    logger.debug(f"Metadata parseada: {metadata}")
+    return metadata
 
 
 def extract_complex_tables(
