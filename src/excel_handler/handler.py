@@ -26,7 +26,7 @@ import pandas as pd
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 
-from logger import setup_logger
+from logger import setup_logger, setup_processor_logger
 from .exceptions import (
     FileOperationError,
     InvalidFileFormatError,
@@ -34,13 +34,8 @@ from .exceptions import (
     SheetNotFoundError,
 )
 
-# Logger Nivel 3 - Procesador: INFO solo archivo, manipula Excel sin saturar consola
-logger = setup_logger(
-    __name__,
-    level="INFO",
-    console_output=False,
-    file_output=True
-)
+# Logger Nivel 3 - Procesador: Configuración dinámica desde variables de entorno
+logger = setup_processor_logger(setup_logger, __name__)
 
 
 class ExcelHandler:

@@ -8,15 +8,10 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 
-from logger import setup_logger
+from logger import setup_logger, setup_coordinator_logger
 
-# Logger Nivel 2 - Coordinador: INFO con consola y archivo, orquesta extracción de hojas
-logger = setup_logger(
-    __name__,
-    level="INFO",
-    console_output=True,
-    file_output=True
-)
+# Logger Nivel 2 - Coordinador: Configuración dinámica desde variables de entorno
+logger = setup_coordinator_logger(setup_logger, __name__)
 
 
 class ExcelSheetExtractor:

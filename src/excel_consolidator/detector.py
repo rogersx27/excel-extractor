@@ -10,17 +10,12 @@ from typing import Dict, List, Tuple
 
 from openpyxl import load_workbook
 
-from logger import setup_logger
+from logger import setup_logger, setup_processor_logger
 
 from .utils import count_non_empty_cells, is_empty_row, is_likely_header
 
-# Logger Nivel 3 - Procesador: INFO solo archivo, detecta estructuras sin saturar consola
-logger = setup_logger(
-    __name__,
-    level="INFO",
-    console_output=False,
-    file_output=True
-)
+# Logger Nivel 3 - Procesador: Configuración dinámica desde variables de entorno
+logger = setup_processor_logger(setup_logger, __name__)
 
 
 class StructureType:

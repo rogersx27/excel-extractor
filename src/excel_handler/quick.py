@@ -19,16 +19,11 @@ from typing import Dict, Optional, Union
 import pandas as pd
 import xlsxwriter
 
-from logger import setup_logger
+from logger import setup_logger, setup_processor_logger
 from .exceptions import EmptyDataError, InvalidFileFormatError
 
-# Logger Nivel 3 - Procesador: INFO solo archivo, operaciones rápidas sin saturar consola
-logger = setup_logger(
-    __name__,
-    level="INFO",
-    console_output=False,
-    file_output=True
-)
+# Logger Nivel 3 - Procesador: Configuración dinámica desde variables de entorno
+logger = setup_processor_logger(setup_logger, __name__)
 
 
 class QuickExcel:

@@ -9,17 +9,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
-from logger import setup_logger
+from logger import setup_logger, setup_coordinator_logger
 
 from .consolidator import ExcelConsolidator
 
-# Logger Nivel 2 - Coordinador: INFO con consola y archivo, orquesta batch processing
-logger = setup_logger(
-    __name__,
-    level="INFO",
-    console_output=True,
-    file_output=True
-)
+# Logger Nivel 2 - Coordinador: Configuración dinámica desde variables de entorno
+logger = setup_coordinator_logger(setup_logger, __name__)
 
 
 class BatchConsolidator:

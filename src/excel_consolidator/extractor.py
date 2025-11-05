@@ -11,18 +11,13 @@ from typing import Dict, List, Optional, Tuple
 import pandas as pd
 from openpyxl import load_workbook
 
-from logger import setup_logger
+from logger import setup_logger, setup_processor_logger
 
 from .detector import StructureType, detect_structure
 from .utils import clean_dataframe, is_empty_row
 
-# Logger Nivel 3 - Procesador: INFO solo archivo, extrae datos sin saturar consola
-logger = setup_logger(
-    __name__,
-    level="INFO",
-    console_output=False,
-    file_output=True
-)
+# Logger Nivel 3 - Procesador: Configuración dinámica desde variables de entorno
+logger = setup_processor_logger(setup_logger, __name__)
 
 
 def extract_data(

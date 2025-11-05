@@ -26,15 +26,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from excel_consolidator import BatchConsolidator
-from logger import setup_logger
+from logger import setup_logger, setup_cli_logger
 
-# Logger Nivel 1 - CLI: INFO con consola y archivo para interacción con usuario
-logger = setup_logger(
-    __name__,
-    level="INFO",
-    console_output=True,
-    file_output=True
-)
+# Logger Nivel 1 - CLI: Configuración dinámica desde variables de entorno
+logger = setup_cli_logger(setup_logger, __name__)
 
 
 def main():

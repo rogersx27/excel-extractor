@@ -10,19 +10,14 @@ from typing import Dict, List, Optional, Union
 
 import pandas as pd
 
-from logger import setup_logger
+from logger import setup_logger, setup_coordinator_logger
 
 from .detector import detect_structure
 from .extractor import extract_data
 from .utils import create_output_filename, ensure_output_directory
 
-# Logger Nivel 2 - Coordinador: INFO con consola y archivo, orquesta consolidación
-logger = setup_logger(
-    __name__,
-    level="INFO",
-    console_output=True,
-    file_output=True
-)
+# Logger Nivel 2 - Coordinador: Configuración dinámica desde variables de entorno
+logger = setup_coordinator_logger(setup_logger, __name__)
 
 
 class ExcelConsolidator:
